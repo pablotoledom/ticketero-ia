@@ -1,0 +1,10 @@
+/run/media/datos/Projects/ticketero-ia/src/main/java/com/example/ticketero/model/enums/TicketStatus.java
+/run/media/datos/Projects/ticketero-ia/src/main/java/com/example/ticketero/repository/TicketRepository.java
+/run/media/datos/Projects/ticketero-ia/src/main/java/com/example/ticketero/controller/TicketController.java
+/run/media/datos/Projects/ticketero-ia/src/main/java/com/example/ticketero/model/dto/TicketStatusResponse.java
+/run/media/datos/Projects/ticketero-ia/src/main/java/com/example/ticketero/model/entity/Ticket.java
+/run/media/datos/Projects/ticketero-ia/src/main/java/com/example/ticketero/model/dto/UpdateTicketStatusRequest.java
+/run/media/datos/Projects/ticketero-ia/src/main/java/com/example/ticketero/TicketeroApplication.java
+/run/media/datos/Projects/ticketero-ia/src/main/java/com/example/ticketero/model/dto/CreateTicketRequest.java
+/run/media/datos/Projects/ticketero-ia/src/main/java/com/example/ticketero/model/dto/TicketResponse.java
+/run/media/datos/Projects/ticketero-ia/src/main/java/com/example/ticketero/model/enums/QueueType.java

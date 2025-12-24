@@ -1,264 +1,184 @@
-# Sistema Ticketero Digital - Análisis Completo y Arquitectura
+# 🎫 Sistema Ticketero - API REST
 
-## 📋 Resumen del Proyecto
+Sistema de gestión de tickets con notificaciones en tiempo real desarrollado con Spring Boot 3.2.11 y Java 21.
 
-**Sistema de Gestión de Tickets con Notificaciones en Tiempo Real**  
-Modernización de la experiencia de atención en sucursales bancarias mediante digitalización completa del proceso de tickets, notificaciones automáticas vía Telegram, y panel de monitoreo operacional.
+## 🚀 Características
 
-## 🎯 Objetivos de Negocio
+- ✅ API REST completa para gestión de tickets
+- ✅ Base de datos PostgreSQL con Hibernate
+- ✅ Diferentes tipos de cola (General y Preferencial)
+- ✅ Estados de ticket (Waiting, In Progress, Completed, Cancelled)
+- ✅ Estimación de tiempo de espera
+- ✅ Asignación de asesores y módulos
+- ✅ Estadísticas del sistema
+- ✅ Dockerizado y listo para producción
 
-- **Mejora de NPS:** De 45 a 65 puntos
-- **Reducción de abandonos:** De 15% a 5%
-- **Incremento de eficiencia:** +20% tickets atendidos por ejecutivo
-- **Trazabilidad completa:** Auditoría y análisis para mejora continua
+## 🛠️ Stack Tecnológico
 
-## 📊 Trabajo Realizado
+- **Backend**: Spring Boot 3.2.11
+- **Lenguaje**: Java 21
+- **Base de datos**: PostgreSQL 16
+- **ORM**: Hibernate/JPA
+- **Migraciones**: Flyway (opcional)
+- **Contenedores**: Docker & Docker Compose
+- **Build**: Maven
 
-### ✅ Documento de Requerimientos Funcionales Completado
+## 📋 Prerrequisitos
 
-**Ubicación:** `docs/REQUERIMIENTOS-FUNCIONALES.md`
+- Java 21+
+- Maven 3.8+
+- PostgreSQL 16+ (o Docker)
+- Docker & Docker Compose (opcional)
 
-**Metodología aplicada:** "Documentar → Validar → Confirmar → Continuar"
+## 🚀 Instalación y Ejecución
 
-### ✅ Documento de Arquitectura de Software Completado
+### Opción 1: Con Docker Compose (Recomendado)
 
-**Ubicación:** `docs/ARQUITECTURA.md`
+```bash
+# Clonar el repositorio
+git clone <repository-url>
+cd ticketero-ia
 
-**Metodología aplicada:** "Diseñar → Validar → Confirmar → Continuar"
+# Ejecutar con Docker Compose
+docker-compose up -d
 
-### 📈 Métricas del Documento de Requerimientos
+# La API estará disponible en http://localhost:8080
+```
 
-| Componente | Cantidad | Estado |
-|------------|----------|--------|
-| **Requerimientos Funcionales** | 8 | ✅ Completados |
-| **Reglas de Negocio** | 13 | ✅ Numeradas y aplicadas |
-| **Escenarios Gherkin** | 44+ | ✅ Distribuidos por RF |
-| **Endpoints HTTP** | 11 | ✅ Mapeados y clasificados |
-| **Entidades de Datos** | 4 | ✅ Con campos detallados |
-| **Enumeraciones** | 5 | ✅ Con valores completos |
+### Opción 2: Ejecución Local
 
-### 🏢 Métricas del Documento de Arquitectura
+```bash
+# 1. Configurar PostgreSQL
+createdb ticketero
 
-| Componente | Cantidad | Estado |
-|------------|----------|--------|
-| **Stack Tecnológico** | 6 tecnologías | ✅ Justificadas con alternativas |
-| **Diagramas PlantUML** | 3 diagramas | ✅ C4, Secuencia, ER |
-| **Capas Arquitectónicas** | 5 capas | ✅ Con responsabilidades |
-| **Componentes Principales** | 9 componentes | ✅ Controllers, Services, Schedulers |
-| **Decisiones Arquitectónicas (ADRs)** | 5 ADRs | ✅ Con contexto y consecuencias |
-| **Configuración** | Completa | ✅ Docker, Properties, Variables |
+# 2. Configurar variables de entorno
+export DATABASE_URL=jdbc:postgresql://localhost:5432/ticketero
+export DATABASE_USERNAME=dev
+export DATABASE_PASSWORD=dev123
 
-## 🏢 Arquitectura de Software
+# 3. Compilar y ejecutar
+mvn clean compile
+mvn spring-boot:run
 
-### Stack Tecnológico Seleccionado
-- **Backend:** Java 21 + Spring Boot 3.2.11
-- **Base de Datos:** PostgreSQL 16
-- **Migraciones:** Flyway
-- **Integración:** Telegram Bot API + RestTemplate
-- **Containerización:** Docker + Docker Compose
-- **Build:** Maven 3.9+
+# La API estará disponible en http://localhost:8080
+```
 
-### Diagramas de Arquitectura
-- **Diagrama C4:** Contexto del sistema con actores y sistemas externos
-- **Diagrama de Secuencia:** Flujo end-to-end en 5 fases
-- **Modelo ER:** 4 entidades principales con relaciones
+## 📚 Documentación de API
 
-### Componentes Principales
-- **Controllers:** TicketController, AdminController
-- **Services:** TicketService, TelegramService, QueueManagementService, AdvisorService, NotificationService
-- **Schedulers:** MessageScheduler (60s), QueueProcessorScheduler (5s)
-- **Repositories:** Spring Data JPA con queries custom
+Ver [API-DOCUMENTATION.md](./API-DOCUMENTATION.md) para detalles completos de todos los endpoints.
 
-### Decisiones Arquitectónicas (ADRs)
-1. **ADR-001:** No Circuit Breakers (simplicidad 80/20)
-2. **ADR-002:** RestTemplate vs WebClient (debugging más fácil)
-3. **ADR-003:** Scheduler vs Queue (PostgreSQL como queue)
-4. **ADR-004:** Flyway para migraciones (SQL plano)
-5. **ADR-005:** Bean Validation en DTOs (declarativo)
+### Endpoints Principales
 
-## 🔧 Requerimientos Funcionales Documentados
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/tickets` | Crear nuevo ticket |
+| GET | `/api/tickets/{codigo}/status` | Consultar estado |
+| PUT | `/api/tickets/{codigo}/status` | Actualizar estado |
+| GET | `/api/tickets/waiting` | Tickets en espera |
+| GET | `/api/tickets/stats` | Estadísticas |
+| DELETE | `/api/tickets/{codigo}` | Cancelar ticket |
+| GET | `/api/tickets/health` | Health check |
 
-### RF-001: Crear Ticket Digital
-- **Descripción:** Creación de tickets con UUID, cálculo de posición y tiempo estimado
-- **Escenarios:** 7 casos Gherkin (happy path + errores + edge cases)
-- **Endpoint:** `POST /api/tickets`
+## 🧪 Pruebas
 
-### RF-002: Enviar Notificaciones Automáticas vía Telegram
-- **Descripción:** 3 mensajes automáticos con plantillas HTML y reintentos
-- **Escenarios:** 7 casos incluyendo fallos y backoff exponencial
-- **Proceso:** Automatizado por scheduler
+```bash
+# Ejecutar script de pruebas automáticas
+./test-api.sh
 
-### RF-003: Calcular Posición y Tiempo Estimado
-- **Descripción:** Cálculo en tiempo real con fórmulas matemáticas
-- **Algoritmo:** `posición × tiempoPromedioCola`
-- **Endpoints:** `GET /api/tickets/{numero}/position`
+# O probar manualmente
+curl http://localhost:8080/api/tickets/health
+```
 
-### RF-004: Asignar Ticket a Ejecutivo Automáticamente
-- **Descripción:** Asignación con prioridad de colas y balanceo de carga
-- **Algoritmo:** 3 pasos (cola → ticket → ejecutivo)
-- **Endpoints:** `PUT /api/admin/advisors/{id}/status`
-
-### RF-005: Gestionar Múltiples Colas
-- **Descripción:** 4 colas independientes con características específicas
-- **Colas:** CAJA(5min), PERSONAL_BANKER(15min), EMPRESAS(20min), GERENCIA(30min)
-- **Endpoints:** `GET /api/admin/queues/{type}`
-
-### RF-006: Consultar Estado del Ticket
-- **Descripción:** Consulta por UUID o número con información actualizada
-- **Tipos:** Por UUID (completo) y por número (posición)
-- **Endpoints:** `GET /api/tickets/{uuid}`, `GET /api/tickets/{numero}/position`
-
-### RF-007: Panel de Monitoreo para Supervisor
-- **Descripción:** Dashboard en tiempo real con alertas automáticas
-- **Componentes:** Resumen, colas, ejecutivos, alertas
-- **Endpoints:** `GET /api/admin/dashboard`
-
-### RF-008: Registrar Auditoría de Eventos
-- **Descripción:** Trazabilidad completa con registros inmutables
-- **Eventos:** 12 tipos categorizados (tickets, mensajería, ejecutivos, admin)
-- **Endpoints:** `GET /api/admin/audit/ticket/{id}`
-
-## 🏗️ Modelo de Datos
-
-### Entidades Principales
-
-**Ticket** (12 campos)
-- UUID, número, datos cliente, estado, posición, tiempos, asignación
-
-**Advisor** (9 campos)  
-- Datos ejecutivo, estado, módulo, contadores, timestamps
-
-**Message** (8 campos)
-- Plantilla, estado envío, timestamps, intentos, Telegram ID
-
-**AuditLog** (11 campos)
-- Evento, actor, entidad, cambios (JSONB), metadata
-
-### Enumeraciones
-- **QueueType:** 4 tipos de cola con prioridades
-- **TicketStatus:** 6 estados del ciclo de vida
-- **AdvisorStatus:** 3 estados operacionales
-- **MessageTemplate:** 3 plantillas de notificación
-- **MessageStatus:** 3 estados de envío
-
-## 📋 Reglas de Negocio Críticas
-
-| ID | Regla | Descripción |
-|----|-------|-------------|
-| **RN-001** | Unicidad | 1 cliente = 1 ticket activo máximo |
-| **RN-002** | Prioridad | GERENCIA > EMPRESAS > PERSONAL_BANKER > CAJA |
-| **RN-003** | FIFO | Orden cronológico dentro de cada cola |
-| **RN-004** | Balanceo | Ejecutivo con menor assignedTicketsCount |
-| **RN-007/008** | Reintentos | 3 intentos con backoff exponencial |
-| **RN-010** | Cálculo | tiempoEstimado = posición × tiempoPromedio |
-| **RN-011** | Auditoría | Registro obligatorio de eventos críticos |
-
-## 🌐 API Endpoints (11 total)
-
-### Públicos (sin autenticación)
-- `POST /api/tickets` - Crear ticket
-- `GET /api/tickets/{uuid}` - Consultar por UUID  
-- `GET /api/tickets/{numero}/position` - Consultar posición
-
-### Administrativos (con autenticación)
-- `GET /api/admin/dashboard` - Dashboard completo
-- `GET /api/admin/queues/{type}` - Estado de colas
-- `GET /api/admin/advisors` - Estado ejecutivos
-- `PUT /api/admin/advisors/{id}/status` - Cambiar estado
-- `GET /api/admin/audit/ticket/{id}` - Auditoría
-- `GET /api/admin/alerts` - Alertas activas
-
-## 🔄 Casos de Uso Principales
-
-### CU-001: Flujo Completo de Atención
-Cliente → Crear ticket → Notificaciones → Asignación → Atención → Auditoría
-
-### CU-002: Supervisión Operacional  
-Supervisor → Dashboard → Monitoreo → Alertas → Acciones correctivas
-
-### CU-003: Gestión de Fallos
-Sistema → Detectar fallo → Reintentos → Alertas → Intervención manual
-
-## 📊 Matrices de Trazabilidad
-
-### RF → Beneficio → Endpoints
-Cada requerimiento mapeado a beneficio de negocio y endpoints específicos
-
-### Dependencias entre RFs
-8 relaciones documentadas (secuenciales, concurrentes, triggers)
-
-### Validaciones Implementadas
-- **Completitud:** ✅ 8 RF + 13 RN + 44 escenarios
-- **Claridad:** ✅ Gherkin + JSON + algoritmos
-- **Trazabilidad:** ✅ RF → beneficio → endpoints  
-- **Verificabilidad:** ✅ Criterios medibles + ejemplos
-
-## 🚀 Próximos Pasos
-
-### ✅ PROMPT 1: Análisis de Requerimientos - COMPLETADO
-- **Entrada:** Contexto de negocio
-- **Salida:** Requerimientos funcionales detallados
-- **Resultado:** 8 RF + 13 RN + 44 escenarios Gherkin
-
-### ✅ PROMPT 2: Arquitectura de Software - COMPLETADO
-- **Entrada:** Documento de requerimientos funcionales
-- **Salida:** Diseño de arquitectura de alto nivel
-- **Resultado:** Stack + Diagramas + Componentes + ADRs
-
-### 🔄 PROMPT 3: Plan Detallado de Implementación
-- **Entrada:** Documentos de requerimientos y arquitectura
-- **Salida:** Plan de implementación paso a paso
-- **Componentes:** Migraciones SQL, estructura de proyecto, configuración
-
-### Implementación
-- **Base contractual:** Criterios de aceptación verificables
-- **Casos de prueba:** Escenarios Gherkin como base
-- **Validación QA:** 44+ casos documentados
-
-## 📁 Estructura de Archivos
+## 📁 Estructura del Proyecto
 
 ```
 ticketero-ia/
-├── docs/
-│   ├── project-requirements.md          # Contexto de negocio original
-│   ├── REQUERIMIENTOS-FUNCIONALES.md    # 📋 Requerimientos (COMPLETADO)
-│   ├── ARQUITECTURA.md                  # 🏢 Arquitectura (COMPLETADO)
-│   └── diagrams/
-│       ├── 01-context-diagram.puml      # Diagrama C4
-│       ├── 02-sequence-diagram.puml     # Diagrama de Secuencia
-│       └── 03-er-diagram.puml           # Modelo de Datos ER
-├── prompts/
-│   ├── PROMPT 1 - ANÁLISIS.md          # Metodología aplicada
-│   ├── PROMPT 2 - ARQUITECTURA.md       # Metodología aplicada
-│   └── PROMPT 3 - IMPLEMENTACIÓN.md    # Siguiente fase
-└── README.md                           # Este archivo
+├── src/main/java/com/example/ticketero/
+│   ├── controller/          # Controladores REST
+│   ├── model/
+│   │   ├── entity/         # Entidades JPA
+│   │   ├── dto/            # DTOs
+│   │   └── enums/          # Enumeraciones
+│   ├── repository/         # Repositorios JPA
+│   └── TicketeroApplication.java
+├── src/main/resources/
+│   ├── db/migration/       # Migraciones Flyway
+│   └── application.yml     # Configuración
+├── docs/                   # Documentación técnica
+├── docker-compose.yml      # Configuración Docker
+├── Dockerfile             # Imagen Docker
+├── test-api.sh           # Script de pruebas
+└── README.md
 ```
 
-## 🎯 Resultados Clave
+## 🔧 Configuración
 
-### Fase 1: Análisis de Requerimientos (✅ COMPLETADO)
-✅ **Documento profesional** de nivel empresarial  
-✅ **44+ escenarios Gherkin** verificables  
-✅ **13 reglas de negocio** aplicadas transversalmente  
-✅ **11 endpoints HTTP** mapeados y clasificados  
-✅ **Trazabilidad completa** RF → beneficio → implementación
+### Variables de Entorno
 
-### Fase 2: Arquitectura de Software (✅ COMPLETADO)
-✅ **Stack tecnológico** justificado (Java 21 + Spring Boot + PostgreSQL)  
-✅ **3 diagramas PlantUML** renderizables (C4, Secuencia, ER)  
-✅ **Arquitectura en capas** con 9 componentes documentados  
-✅ **5 ADRs** con decisiones arquitectónicas justificadas  
-✅ **Configuración completa** Docker + Properties + Variables  
-✅ **Roadmap técnico** para escalamiento futuro
+| Variable | Descripción | Valor por defecto |
+|----------|-------------|-------------------|
+| `DATABASE_URL` | URL de PostgreSQL | `jdbc:postgresql://localhost:5432/ticketero` |
+| `DATABASE_USERNAME` | Usuario de BD | `dev` |
+| `DATABASE_PASSWORD` | Contraseña de BD | `dev123` |
+| `TELEGRAM_BOT_TOKEN` | Token del bot (futuro) | - |
 
-### Preparado para Implementación
-✅ **Base sólida** para desarrollo  
-✅ **Documentación técnica** completa  
-✅ **Decisión de tecnologías** validada  
-✅ **Plan de escalamiento** definido
+### Perfiles de Spring
 
----
+- `default`: Desarrollo local
+- `docker`: Contenedores Docker
+- `prod`: Producción (futuro)
 
-**Preparado por:** Analista de Negocio Senior + Arquitecto de Software Senior  
-**Metodología:** Documentar → Validar → Confirmar → Continuar  
-**Estado:** ✅ FASES 1 y 2 COMPLETADAS - Listo para Plan de Implementación
+## 📊 Modelo de Datos
+
+### Entidad Ticket
+
+```sql
+CREATE TABLE tickets (
+    id BIGSERIAL PRIMARY KEY,
+    codigo_referencia VARCHAR(20) UNIQUE NOT NULL,
+    numero VARCHAR(10) NOT NULL,
+    national_id VARCHAR(20) NOT NULL,
+    telefono VARCHAR(15) NOT NULL,
+    branch_office VARCHAR(50) NOT NULL,
+    queue_type VARCHAR(20) CHECK (queue_type IN ('PREFERENCIAL', 'GENERAL')),
+    status VARCHAR(20) DEFAULT 'WAITING' CHECK (status IN ('WAITING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')),
+    position_in_queue INTEGER DEFAULT 0,
+    estimated_wait_minutes INTEGER DEFAULT 0,
+    assigned_advisor VARCHAR(100),
+    assigned_module_number INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## 🚀 Próximas Funcionalidades
+
+- [ ] Integración con Telegram Bot
+- [ ] Notificaciones en tiempo real (WebSocket)
+- [ ] Dashboard web para administradores
+- [ ] Métricas avanzadas con Micrometer
+- [ ] Autenticación y autorización
+- [ ] Tests unitarios e integración
+- [ ] CI/CD con GitHub Actions
+
+## 🤝 Contribución
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit tus cambios (`git commit -am 'Agregar nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Abre un Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+
+## 👥 Autores
+
+- **Desarrollador Principal** - Implementación inicial
+
+## 🙏 Agradecimientos
+
+- Spring Boot Team por el excelente framework
+- PostgreSQL por la robusta base de datos
+- Docker por la containerización
