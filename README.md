@@ -1,184 +1,196 @@
-# 🎫 Sistema Ticketero - API REST
+# Ticketero - Queue Management System
 
-Sistema de gestión de tickets con notificaciones en tiempo real desarrollado con Spring Boot 3.2.11 y Java 21.
+A robust ticket queue management system with Telegram notifications, built with Spring Boot 3.2 and modern Java 21 features.
 
-## 🚀 Características
+## Architecture
 
-- ✅ API REST completa para gestión de tickets
-- ✅ Base de datos PostgreSQL con Hibernate
-- ✅ Diferentes tipos de cola (General y Preferencial)
-- ✅ Estados de ticket (Waiting, In Progress, Completed, Cancelled)
-- ✅ Estimación de tiempo de espera
-- ✅ Asignación de asesores y módulos
-- ✅ Estadísticas del sistema
-- ✅ Dockerizado y listo para producción
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Client    │────▶│  REST API   │────▶│  PostgreSQL │
+└─────────────┘     └──────┬──────┘     └─────────────┘
+                          │
+                    ┌─────▼─────┐
+                    │  Outbox   │
+                    │  Pattern  │
+                    └─────┬─────┘
+                          │
+                    ┌─────▼─────┐     ┌─────────────┐
+                    │ RabbitMQ  │────▶│   Workers   │
+                    └───────────┘     └──────┬──────┘
+                                             │
+                                      ┌──────▼──────┐
+                                      │  Telegram   │
+                                      │    Bot      │
+                                      └─────────────┘
+```
 
-## 🛠️ Stack Tecnológico
+## Features
 
-- **Backend**: Spring Boot 3.2.11
-- **Lenguaje**: Java 21
-- **Base de datos**: PostgreSQL 16
-- **ORM**: Hibernate/JPA
-- **Migraciones**: Flyway (opcional)
-- **Contenedores**: Docker & Docker Compose
-- **Build**: Maven
+- **Queue Management**: Real-time ticket positioning with estimated wait times
+- **Outbox Pattern**: Transactional consistency between PostgreSQL and RabbitMQ
+- **Telegram Notifications**: Three notification types (created, upcoming, called)
+- **Auto-Recovery**: Automatic detection and recovery of dead workers
+- **Metrics**: Prometheus-compatible metrics for monitoring
 
-## 📋 Prerrequisitos
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Runtime | Java 21 |
+| Framework | Spring Boot 3.2 |
+| Database | PostgreSQL 16 |
+| Messaging | RabbitMQ 3.13 |
+| Migrations | Flyway |
+| Metrics | Micrometer + Prometheus |
+| Containerization | Docker + Docker Compose |
+
+## Prerequisites
 
 - Java 21+
-- Maven 3.8+
-- PostgreSQL 16+ (o Docker)
-- Docker & Docker Compose (opcional)
+- Maven 3.9+
+- Docker & Docker Compose
+- Telegram Bot Token (for notifications)
 
-## 🚀 Instalación y Ejecución
+## Quick Start
 
-### Opción 1: Con Docker Compose (Recomendado)
-
-```bash
-# Clonar el repositorio
-git clone <repository-url>
-cd ticketero-ia
-
-# Ejecutar con Docker Compose
-docker-compose up -d
-
-# La API estará disponible en http://localhost:8080
-```
-
-### Opción 2: Ejecución Local
+### 1. Clone and Configure
 
 ```bash
-# 1. Configurar PostgreSQL
-createdb ticketero
-
-# 2. Configurar variables de entorno
-export DATABASE_URL=jdbc:postgresql://localhost:5432/ticketero
-export DATABASE_USERNAME=dev
-export DATABASE_PASSWORD=dev123
-
-# 3. Compilar y ejecutar
-mvn clean compile
-mvn spring-boot:run
-
-# La API estará disponible en http://localhost:8080
+cd ticketero
+cp .env.example .env
+# Edit .env with your Telegram credentials
 ```
 
-## 📚 Documentación de API
+### 2. Start Services
 
-Ver [API-DOCUMENTATION.md](./API-DOCUMENTATION.md) para detalles completos de todos los endpoints.
+```bash
+docker compose up -d
+```
 
-### Endpoints Principales
+### 3. Verify Health
 
-| Método | Endpoint | Descripción |
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+## API Endpoints
+
+### Tickets
+
+| Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/tickets` | Crear nuevo ticket |
-| GET | `/api/tickets/{codigo}/status` | Consultar estado |
-| PUT | `/api/tickets/{codigo}/status` | Actualizar estado |
-| GET | `/api/tickets/waiting` | Tickets en espera |
-| GET | `/api/tickets/stats` | Estadísticas |
-| DELETE | `/api/tickets/{codigo}` | Cancelar ticket |
-| GET | `/api/tickets/health` | Health check |
+| POST | `/api/tickets` | Create new ticket |
+| GET | `/api/tickets/{uuid}` | Get ticket by reference code |
+| GET | `/api/tickets/{numero}/position` | Get queue position |
 
-## 🧪 Pruebas
+### Admin Dashboard
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admin/dashboard` | System overview |
+| GET | `/api/admin/queues/{type}` | Queue status |
+| GET | `/api/admin/advisors` | List advisors |
+| PUT | `/api/admin/advisors/{id}/status` | Update advisor status |
+
+## Project Structure
+
+```
+src/main/java/com/example/ticketero/
+├── config/          # Spring configurations
+├── consumer/        # RabbitMQ message consumers
+├── controller/      # REST API controllers
+├── exception/       # Custom exceptions
+├── model/
+│   ├── dto/         # Data Transfer Objects
+│   ├── entity/      # JPA entities
+│   └── enums/       # Enumeration types
+├── repository/      # Spring Data repositories
+├── service/         # Business logic services
+└── util/            # Utility classes
+```
+
+## Key Patterns
+
+### Outbox Pattern
+
+Ensures transactional consistency between database and message broker:
+
+```java
+@Transactional
+public TicketResponse crearTicket(TicketCreateRequest request) {
+    Ticket ticket = ticketRepository.saveAndFlush(ticket);
+    outboxMessageRepository.save(outboxMessage);  // Same transaction
+    return response;
+}
+```
+
+### Manual ACK with RabbitMQ
+
+Prevents message loss with manual acknowledgment:
+
+```java
+@RabbitListener(queues = "caja-queue", ackMode = "MANUAL")
+public void process(Message msg, Channel channel, long deliveryTag) {
+    try {
+        processTicket(msg);
+        channel.basicAck(deliveryTag, false);
+    } catch (Exception e) {
+        channel.basicNack(deliveryTag, false, true);
+    }
+}
+```
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection URL | `jdbc:postgresql://localhost:5432/ticketero` |
+| `DATABASE_USERNAME` | Database user | `dev` |
+| `DATABASE_PASSWORD` | Database password | `dev123` |
+| `RABBITMQ_HOST` | RabbitMQ host | `localhost` |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token | - |
+| `TELEGRAM_CHAT_ID` | Telegram chat ID | - |
+
+## Development
+
+### Run Tests
 
 ```bash
-# Ejecutar script de pruebas automáticas
-./test-api.sh
-
-# O probar manualmente
-curl http://localhost:8080/api/tickets/health
+./mvnw test
 ```
 
-## 📁 Estructura del Proyecto
+### Build JAR
 
-```
-ticketero-ia/
-├── src/main/java/com/example/ticketero/
-│   ├── controller/          # Controladores REST
-│   ├── model/
-│   │   ├── entity/         # Entidades JPA
-│   │   ├── dto/            # DTOs
-│   │   └── enums/          # Enumeraciones
-│   ├── repository/         # Repositorios JPA
-│   └── TicketeroApplication.java
-├── src/main/resources/
-│   ├── db/migration/       # Migraciones Flyway
-│   └── application.yml     # Configuración
-├── docs/                   # Documentación técnica
-├── docker-compose.yml      # Configuración Docker
-├── Dockerfile             # Imagen Docker
-├── test-api.sh           # Script de pruebas
-└── README.md
+```bash
+./mvnw clean package -DskipTests
 ```
 
-## 🔧 Configuración
+### Run Locally
 
-### Variables de Entorno
-
-| Variable | Descripción | Valor por defecto |
-|----------|-------------|-------------------|
-| `DATABASE_URL` | URL de PostgreSQL | `jdbc:postgresql://localhost:5432/ticketero` |
-| `DATABASE_USERNAME` | Usuario de BD | `dev` |
-| `DATABASE_PASSWORD` | Contraseña de BD | `dev123` |
-| `TELEGRAM_BOT_TOKEN` | Token del bot (futuro) | - |
-
-### Perfiles de Spring
-
-- `default`: Desarrollo local
-- `docker`: Contenedores Docker
-- `prod`: Producción (futuro)
-
-## 📊 Modelo de Datos
-
-### Entidad Ticket
-
-```sql
-CREATE TABLE tickets (
-    id BIGSERIAL PRIMARY KEY,
-    codigo_referencia VARCHAR(20) UNIQUE NOT NULL,
-    numero VARCHAR(10) NOT NULL,
-    national_id VARCHAR(20) NOT NULL,
-    telefono VARCHAR(15) NOT NULL,
-    branch_office VARCHAR(50) NOT NULL,
-    queue_type VARCHAR(20) CHECK (queue_type IN ('PREFERENCIAL', 'GENERAL')),
-    status VARCHAR(20) DEFAULT 'WAITING' CHECK (status IN ('WAITING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')),
-    position_in_queue INTEGER DEFAULT 0,
-    estimated_wait_minutes INTEGER DEFAULT 0,
-    assigned_advisor VARCHAR(100),
-    assigned_module_number INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+```bash
+./mvnw spring-boot:run
 ```
 
-## 🚀 Próximas Funcionalidades
+## Monitoring
 
-- [ ] Integración con Telegram Bot
-- [ ] Notificaciones en tiempo real (WebSocket)
-- [ ] Dashboard web para administradores
-- [ ] Métricas avanzadas con Micrometer
-- [ ] Autenticación y autorización
-- [ ] Tests unitarios e integración
-- [ ] CI/CD con GitHub Actions
+### Health Check
 
-## 🤝 Contribución
+```bash
+curl http://localhost:8080/actuator/health
+```
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -am 'Agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
+### Prometheus Metrics
 
-## 📄 Licencia
+```bash
+curl http://localhost:8080/actuator/prometheus
+```
 
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+### RabbitMQ Management
 
-## 👥 Autores
+Open http://localhost:15672 (user: dev, password: dev123)
 
-- **Desarrollador Principal** - Implementación inicial
+## License
 
-## 🙏 Agradecimientos
-
-- Spring Boot Team por el excelente framework
-- PostgreSQL por la robusta base de datos
-- Docker por la containerización
+This project is for educational purposes as part of Java developer training.

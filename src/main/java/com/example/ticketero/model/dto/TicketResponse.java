@@ -2,27 +2,34 @@ package com.example.ticketero.model.dto;
 
 import com.example.ticketero.model.enums.QueueType;
 import com.example.ticketero.model.enums.TicketStatus;
-import lombok.Builder;
-import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
-@Data
-@Builder
-public class TicketResponse {
-
-    private Long id;
-    private String codigoReferencia;
-    private String numero;
-    private String nationalId;
-    private String telefono;
-    private String branchOffice;
-    private QueueType queueType;
-    private TicketStatus status;
-    private Integer positionInQueue;
-    private Integer estimatedWaitMinutes;
-    private String assignedAdvisor;
-    private Integer assignedModuleNumber;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+/**
+ * Response completo de un ticket
+ */
+public record TicketResponse(
+    UUID codigoReferencia,
+    String numero,
+    QueueType queueType,
+    TicketStatus status,
+    Integer positionInQueue,
+    Integer estimatedWaitMinutes,
+    Integer ticketsAheadOfYou,
+    String branchOffice,
+    AdvisorInfo assignedAdvisor,
+    LocalDateTime createdAt,
+    LocalDateTime calledAt,
+    LocalDateTime startedAt,
+    LocalDateTime completedAt
+) {
+    /**
+     * Información del asesor asignado
+     */
+    public record AdvisorInfo(
+        Long id,
+        String name,
+        Integer moduleNumber
+    ) {}
 }
