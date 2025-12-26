@@ -1,0 +1,476 @@
+openapi: 3.0.3
+info:
+  title: Ticketero API
+  description: |
+    Sistema de gestión de tickets bancarios con notificaciones automáticas vía Telegram.
+    
+    ## Características
+    - Creación de tickets con posición en cola
+    - Notificaciones automáticas (3 tipos)
+    - Dashboard administrativo
+    - Métricas y monitoreo
+    
+    ## Flujo Principal
+    1. **POST /api/tickets** - Crear ticket
+    2. **Notificación inmediata** - "Tu ticket está listo"
+    3. **Notificación pre-aviso** - "Faltan 3 turnos" (~30s)
+    4. **Notificación activa** - "¡Es tu turno!" (~60s)
+    
+  version: 1.0.0
+  contact:
+    name: Equipo Ticketero
+    email: dev@ticketero.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Desarrollo Local
+  - url: https://api-dev.ticketero.com
+    description: Desarrollo
+  - url: https://api-staging.ticketero.com
+    description: Staging
+  - url: https://api.ticketero.com
+    description: Producción
+
+tags:
+  - name: tickets
+    description: Gestión de tickets
+  - name: admin
+    description: Panel administrativo
+  - name: health
+    description: Health checks y métricas
+
+paths:
+  /api/tickets:
+    post:
+      tags:
+        - tickets
+      summary: Crear nuevo ticket
+      description: |
+        Crea un nuevo ticket en el sistema y programa las 3 notificaciones automáticas:
+        - Inmediata: Confirmación de creación
+        - Pre-aviso: ~30 segundos después
+        - Activa: ~60 segundos después
+      operationId: crearTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+            examples:
+              caja:
+                summary: Ticket para caja
+                value:
+                  nationalId: "12345678"
+                  telefono: "1234567890"
+                  branchOffice: "Sucursal Centro"
+                  queue: "CAJA"
+              plataforma:
+                summary: Ticket para plataforma
+                value:
+                  nationalId: "87654321"
+                  telefono: "0987654321"
+                  branchOffice: "Sucursal Norte"
+                  queue: "PLATAFORMA"
+      responses:
+        '201':
+          description: Ticket creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+              examples:
+                success:
+                  summary: Ticket creado
+                  value:
+                    identificador: "550e8400-e29b-41d4-a716-446655440000"
+                    numero: "C01"
+                    queue: "CAJA"
+                    posicionEnCola: 1
+                    tiempoEstimado: "15 minutos"
+                    mensaje: "Ticket creado exitosamente"
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  summary: Error de validación
+                  value:
+                    mensaje: "nationalId: ID nacional inválido"
+                    codigo: 400
+                    timestamp: "2024-11-25T10:30:00Z"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tickets/{uuid}:
+    get:
+      tags:
+        - tickets
+      summary: Consultar ticket por código
+      description: Obtiene información detallada de un ticket usando su código de referencia UUID
+      operationId: consultarTicket
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          description: Código de referencia UUID del ticket
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Ticket encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDetailResponse'
+        '404':
+          description: Ticket no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tickets/{numero}/position:
+    get:
+      tags:
+        - tickets
+      summary: Obtener posición en cola
+      description: Consulta la posición actual del ticket en la cola de atención
+      operationId: obtenerPosicion
+      parameters:
+        - name: numero
+          in: path
+          required: true
+          description: Número del ticket (ej. C01, P02)
+          schema:
+            type: string
+            pattern: '^[A-Z]\d{2}$'
+          example: "C01"
+      responses:
+        '200':
+          description: Posición obtenida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PositionResponse'
+        '404':
+          description: Ticket no encontrado
+
+  /api/admin/dashboard:
+    get:
+      tags:
+        - admin
+      summary: Dashboard administrativo
+      description: Resumen general del sistema con estadísticas en tiempo real
+      operationId: getDashboard
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+
+  /api/admin/queues/{type}:
+    get:
+      tags:
+        - admin
+      summary: Estado de cola específica
+      description: Información detallada de una cola de atención
+      operationId: getQueueStatus
+      parameters:
+        - name: type
+          in: path
+          required: true
+          description: Tipo de cola
+          schema:
+            type: string
+            enum: [CAJA, PLATAFORMA, EJECUTIVO]
+          example: "CAJA"
+      responses:
+        '200':
+          description: Estado de la cola
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueStatusResponse'
+
+  /actuator/health:
+    get:
+      tags:
+        - health
+      summary: Health check
+      description: Verifica el estado de salud de la aplicación y sus dependencias
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Sistema saludable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Sistema no saludable
+
+  /actuator/prometheus:
+    get:
+      tags:
+        - health
+      summary: Métricas Prometheus
+      description: Endpoint para scraping de métricas por Prometheus
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Métricas en formato Prometheus
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  schemas:
+    TicketRequest:
+      type: object
+      required:
+        - nationalId
+        - branchOffice
+        - queue
+      properties:
+        nationalId:
+          type: string
+          pattern: '^[0-9]{8,12}$'
+          description: ID nacional del usuario
+          example: "12345678"
+        telefono:
+          type: string
+          pattern: '^[0-9]{9,15}$'
+          description: Número de teléfono (opcional)
+          example: "1234567890"
+        branchOffice:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Nombre de la sucursal
+          example: "Sucursal Centro"
+        queue:
+          type: string
+          enum: [CAJA, PLATAFORMA, EJECUTIVO]
+          description: Tipo de cola de atención
+          example: "CAJA"
+
+    TicketResponse:
+      type: object
+      properties:
+        identificador:
+          type: string
+          format: uuid
+          description: Código de referencia único
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        numero:
+          type: string
+          description: Número del ticket
+          example: "C01"
+        queue:
+          type: string
+          description: Cola asignada
+          example: "CAJA"
+        posicionEnCola:
+          type: integer
+          minimum: 1
+          description: Posición actual en la cola
+          example: 1
+        tiempoEstimado:
+          type: string
+          description: Tiempo estimado de espera
+          example: "15 minutos"
+        mensaje:
+          type: string
+          description: Mensaje informativo
+          example: "Ticket creado exitosamente"
+
+    TicketDetailResponse:
+      type: object
+      properties:
+        identificador:
+          type: string
+          format: uuid
+        numero:
+          type: string
+        nationalId:
+          type: string
+        telefono:
+          type: string
+        branchOffice:
+          type: string
+        queue:
+          type: string
+        status:
+          type: string
+          enum: [CREATED, NOTIFIED, COMPLETED]
+        posicionEnCola:
+          type: integer
+        tiempoEstimado:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        mensajes:
+          type: array
+          items:
+            $ref: '#/components/schemas/MensajeInfo'
+
+    MensajeInfo:
+      type: object
+      properties:
+        plantilla:
+          type: string
+          enum: [TICKET_CREATED, TICKET_UPCOMING, TICKET_ACTIVE]
+        estadoEnvio:
+          type: string
+          enum: [PENDIENTE, ENVIADO, FALLIDO]
+        fechaProgramada:
+          type: string
+          format: date-time
+        fechaEnvio:
+          type: string
+          format: date-time
+
+    PositionResponse:
+      type: object
+      properties:
+        numero:
+          type: string
+          example: "C01"
+        posicionActual:
+          type: integer
+          example: 3
+        tiempoEstimado:
+          type: string
+          example: "12 minutos"
+        enAtencion:
+          type: string
+          description: Ticket actualmente en atención
+          example: "C02"
+
+    DashboardResponse:
+      type: object
+      properties:
+        ticketsHoy:
+          type: integer
+          example: 156
+        ticketsActivos:
+          type: integer
+          example: 23
+        tiempoPromedioAtencion:
+          type: string
+          example: "8 minutos"
+        colas:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueSummary'
+
+    QueueSummary:
+      type: object
+      properties:
+        tipo:
+          type: string
+          example: "CAJA"
+        ticketsEnCola:
+          type: integer
+          example: 8
+        tiempoPromedio:
+          type: string
+          example: "5 minutos"
+        ultimoTicket:
+          type: string
+          example: "C15"
+
+    QueueStatusResponse:
+      type: object
+      properties:
+        tipo:
+          type: string
+          example: "CAJA"
+        ticketsEnCola:
+          type: integer
+          example: 8
+        ticketActual:
+          type: string
+          example: "C07"
+        proximosTickets:
+          type: array
+          items:
+            type: string
+          example: ["C08", "C09", "C10"]
+        tiempoPromedioAtencion:
+          type: string
+          example: "5 minutos"
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN]
+          example: "UP"
+        components:
+          type: object
+          properties:
+            db:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "UP"
+            rabbit:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "UP"
+
+    ErrorResponse:
+      type: object
+      properties:
+        mensaje:
+          type: string
+          description: Descripción del error
+          example: "nationalId: ID nacional inválido"
+        codigo:
+          type: integer
+          description: Código HTTP del error
+          example: 400
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp del error
+          example: "2024-11-25T10:30:00Z"
+
+  examples:
+    TicketCajaRequest:
+      summary: Ticket para caja
+      value:
+        nationalId: "12345678"
+        telefono: "1234567890"
+        branchOffice: "Sucursal Centro"
+        queue: "CAJA"
+
+    TicketPlataformaRequest:
+      summary: Ticket para plataforma
+      value:
+        nationalId: "87654321"
+        telefono: "0987654321"
+        branchOffice: "Sucursal Norte"
+        queue: "PLATAFORMA"

@@ -1,0 +1,526 @@
+{
+  "info": {
+    "name": "Ticketero API",
+    "description": "Sistema de gestión de tickets bancarios con notificaciones Telegram",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "ticketUuid",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticketNumero",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🎫 Tickets",
+      "item": [
+        {
+          "name": "Crear Ticket - Caja",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('identificador');",
+                  "    pm.expect(jsonData).to.have.property('numero');",
+                  "    pm.expect(jsonData).to.have.property('queue');",
+                  "    pm.expect(jsonData).to.have.property('posicionEnCola');",
+                  "});",
+                  "",
+                  "pm.test('Save ticket data for next requests', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('ticketUuid', jsonData.identificador);",
+                  "    pm.collectionVariables.set('ticketNumero', jsonData.numero);",
+                  "});",
+                  "",
+                  "pm.test('Queue is CAJA', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.queue).to.eql('CAJA');",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 1000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nationalId\": \"12345678\",\n  \"telefono\": \"1234567890\",\n  \"branchOffice\": \"Sucursal Centro\",\n  \"queue\": \"CAJA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets"]
+            },
+            "description": "Crea un nuevo ticket para la cola de CAJA"
+          }
+        },
+        {
+          "name": "Crear Ticket - Plataforma",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Queue is PLATAFORMA', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.queue).to.eql('PLATAFORMA');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nationalId\": \"87654321\",\n  \"telefono\": \"0987654321\",\n  \"branchOffice\": \"Sucursal Norte\",\n  \"queue\": \"PLATAFORMA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets"]
+            },
+            "description": "Crea un nuevo ticket para la cola de PLATAFORMA"
+          }
+        },
+        {
+          "name": "Consultar Ticket por UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has ticket details', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('identificador');",
+                  "    pm.expect(jsonData).to.have.property('numero');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('mensajes');",
+                  "});",
+                  "",
+                  "pm.test('Mensajes array exists', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.mensajes).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/{{ticketUuid}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "{{ticketUuid}}"]
+            },
+            "description": "Consulta un ticket específico usando su UUID (requiere crear ticket primero)"
+          }
+        },
+        {
+          "name": "Obtener Posición en Cola",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has position info', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('numero');",
+                  "    pm.expect(jsonData).to.have.property('posicionActual');",
+                  "    pm.expect(jsonData).to.have.property('tiempoEstimado');",
+                  "});",
+                  "",
+                  "pm.test('Position is a number', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.posicionActual).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/{{ticketNumero}}/position",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "{{ticketNumero}}", "position"]
+            },
+            "description": "Obtiene la posición actual del ticket en la cola"
+          }
+        }
+      ],
+      "description": "Endpoints para gestión de tickets"
+    },
+    {
+      "name": "👨‍💼 Admin",
+      "item": [
+        {
+          "name": "Dashboard Administrativo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Dashboard has required metrics', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('ticketsHoy');",
+                  "    pm.expect(jsonData).to.have.property('ticketsActivos');",
+                  "    pm.expect(jsonData).to.have.property('colas');",
+                  "});",
+                  "",
+                  "pm.test('Colas is an array', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.colas).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "dashboard"]
+            },
+            "description": "Obtiene métricas generales del sistema"
+          }
+        },
+        {
+          "name": "Estado Cola - CAJA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Queue status has required fields', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('tipo');",
+                  "    pm.expect(jsonData).to.have.property('ticketsEnCola');",
+                  "    pm.expect(jsonData).to.have.property('proximosTickets');",
+                  "});",
+                  "",
+                  "pm.test('Tipo is CAJA', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.tipo).to.eql('CAJA');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/queues/CAJA",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "queues", "CAJA"]
+            },
+            "description": "Obtiene el estado detallado de la cola CAJA"
+          }
+        },
+        {
+          "name": "Estado Cola - PLATAFORMA",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/queues/PLATAFORMA",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "queues", "PLATAFORMA"]
+            },
+            "description": "Obtiene el estado detallado de la cola PLATAFORMA"
+          }
+        }
+      ],
+      "description": "Endpoints administrativos para monitoreo"
+    },
+    {
+      "name": "🏥 Health & Monitoring",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('System is UP', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('UP');",
+                  "});",
+                  "",
+                  "pm.test('Database is UP', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.components.db.status).to.eql('UP');",
+                  "});",
+                  "",
+                  "pm.test('RabbitMQ is UP', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.components.rabbit.status).to.eql('UP');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Verifica el estado de salud del sistema"
+          }
+        },
+        {
+          "name": "Prometheus Metrics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Content-Type is text/plain', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/plain');",
+                  "});",
+                  "",
+                  "pm.test('Response contains metrics', function () {",
+                  "    pm.expect(pm.response.text()).to.include('jvm_memory');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/prometheus",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "prometheus"]
+            },
+            "description": "Obtiene métricas en formato Prometheus"
+          }
+        }
+      ],
+      "description": "Endpoints de salud y monitoreo"
+    },
+    {
+      "name": "🧪 Test Scenarios",
+      "item": [
+        {
+          "name": "Flujo Completo - Crear y Consultar",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generar datos aleatorios para el test",
+                  "const randomId = Math.floor(Math.random() * 90000000) + 10000000;",
+                  "const randomPhone = '9' + Math.floor(Math.random() * 100000000);",
+                  "",
+                  "pm.collectionVariables.set('testNationalId', randomId.toString());",
+                  "pm.collectionVariables.set('testPhone', randomPhone);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ticket created successfully', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "// Guardar UUID para consulta posterior",
+                  "const jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('testTicketUuid', jsonData.identificador);",
+                  "",
+                  "// Hacer consulta inmediata del ticket creado",
+                  "setTimeout(() => {",
+                  "    pm.sendRequest({",
+                  "        url: pm.collectionVariables.get('baseUrl') + '/api/tickets/' + jsonData.identificador,",
+                  "        method: 'GET'",
+                  "    }, (err, response) => {",
+                  "        pm.test('Ticket consultation successful', function () {",
+                  "            pm.expect(response.code).to.eql(200);",
+                  "        });",
+                  "        ",
+                  "        pm.test('Ticket data matches', function () {",
+                  "            const consultData = response.json();",
+                  "            pm.expect(consultData.identificador).to.eql(jsonData.identificador);",
+                  "            pm.expect(consultData.numero).to.eql(jsonData.numero);",
+                  "        });",
+                  "    });",
+                  "}, 100);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nationalId\": \"{{testNationalId}}\",\n  \"telefono\": \"{{testPhone}}\",\n  \"branchOffice\": \"Sucursal Test\",\n  \"queue\": \"CAJA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets"]
+            },
+            "description": "Test de flujo completo: crear ticket y consultarlo inmediatamente"
+          }
+        },
+        {
+          "name": "Test Validación - Datos Inválidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message contains validation info', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('mensaje');",
+                  "    pm.expect(jsonData.codigo).to.eql(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nationalId\": \"123\",\n  \"telefono\": \"invalid\",\n  \"branchOffice\": \"\",\n  \"queue\": \"INVALID_QUEUE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets"]
+            },
+            "description": "Test de validación con datos inválidos"
+          }
+        }
+      ],
+      "description": "Escenarios de testing automatizado"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Script global que se ejecuta antes de cada request",
+          "console.log('Executing request to: ' + pm.request.url);"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Script global que se ejecuta después de cada request",
+          "pm.test('Response time is reasonable', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});"
+        ]
+      }
+    }
+  ]
+}
